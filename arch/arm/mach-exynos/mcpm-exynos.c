@@ -331,6 +331,26 @@ static const struct of_device_id exynos_dt_mcpm_match[] = {
 	{},
 };
 
+int mcpm_loopback(void (*cache_disable)(void));
+
+static void exynos_cache_down(void)
+{
+	pr_warn("Exynos: disabling cache\n");
+	if (read_cpuid_part_number() == ARM_CPU_PART_CORTEX_A15) {
+		/*
+		 * On the Cortex-A15 we need to disable
+		 * L2 prefetching before flushing the cache.
+		 */
+		asm volatile(
+		"mcr	p15, 1, %0, c15, c0, 3 \n\t"
+		"isb	\n\t"
+		"dsb	"
+		: : "r" (0x400) );
+	}
+	exynos_v7_exit_coherency_flush(all);
+	cci_disable_port_by_cpu(read_cpuid_mpidr());
+}
+
 static int __init exynos_mcpm_init(void)
 {
 	struct device_node *node;
@@ -366,8 +386,11 @@ static int __init exynos_mcpm_init(void)
 	exynos_mcpm_usage_count_init();
 
 	ret = mcpm_platform_register(&exynos_power_ops);
-	if (!ret)
+	if (!ret) {
 		ret = mcpm_sync_init(exynos_pm_power_up_setup);
+		BUG_ON(mcpm_loopback(exynos_cache_down) != 0);
+		pr_info("Exynos power management initialized\n");
+	}
 	if (ret) {
 		iounmap(ns_sram_base_addr);
 		return ret;
