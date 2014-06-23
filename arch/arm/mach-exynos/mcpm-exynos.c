@@ -99,15 +99,51 @@ static int exynos_cluster_power_control(unsigned int cluster, int enable)
 	return -ETIMEDOUT;
 }
 
+#define EXYNOS_PA_CCI 0x10d2000
+#define SECURE_OFFSE 0x08
+#define SMC_CMD_REG (-101)
+#define SMC_REG_CLASS_SFR_W	(0x1 << 30)
+#define SMC_REG_ID_SFR_W(ADDR)	(SMC_REG_CLASS_SFR_W | ((ADDR) >> 2))
+
+#include "smc.h"
+
+static void enable_snoop(void) 
+{ 
+	phys_addr_t phyaddr1 = 0x10D24000;
+	phys_addr_t phyaddr2 = 0x10D25000;
+	void *addr1 = ioremap(phyaddr1, SZ_4K);
+	void *addr2 = ioremap(phyaddr2, SZ_4K);
+        writel(0x3, addr1); 
+        writel(0x3, addr2); 
+}
+
+static int exynos5420_cci_enable(void)
+{
+	int val = 1;
+
+	exynos_smc(SMC_CMD_REG, 
+		   SMC_REG_ID_SFR_W(EXYNOS_PA_CCI + SECURE_OFFSE), val, 0);
+
+	enable_snoop();
+
+	return 0;
+}
+
 static int exynos_power_up(unsigned int cpu, unsigned int cluster)
 {
 	unsigned int cpunr = cpu + (cluster * EXYNOS5420_CPUS_PER_CLUSTER);
 	int err = 0;
+	static int init_cci = 0;
 
 	pr_debug("%s: cpu %u cluster %u\n", __func__, cpu, cluster);
 	if (cpu >= EXYNOS5420_CPUS_PER_CLUSTER ||
 		cluster >= EXYNOS5420_NR_CLUSTERS)
 		return -EINVAL;
+
+	if (!init_cci) {
+		exynos5420_cci_enable();
+		init_cci = 1;
+	}
 
 	/*
 	 * Since this is called with IRQs enabled, and no arch_spin_lock_irq
