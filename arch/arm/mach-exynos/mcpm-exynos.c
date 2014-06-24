@@ -133,17 +133,14 @@ static int exynos_power_up(unsigned int cpu, unsigned int cluster)
 {
 	unsigned int cpunr = cpu + (cluster * EXYNOS5420_CPUS_PER_CLUSTER);
 	int err = 0;
-	static int init_cci = 0;
 
 	pr_debug("%s: cpu %u cluster %u\n", __func__, cpu, cluster);
 	if (cpu >= EXYNOS5420_CPUS_PER_CLUSTER ||
 		cluster >= EXYNOS5420_NR_CLUSTERS)
 		return -EINVAL;
 
-	if (!init_cci) {
+	if (cpu == 0)
 		exynos5420_cci_enable();
-		init_cci = 1;
-	}
 
 	/*
 	 * Since this is called with IRQs enabled, and no arch_spin_lock_irq
