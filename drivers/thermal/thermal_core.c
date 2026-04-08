@@ -1028,7 +1028,7 @@ static void thermal_zone_cdev_bind(struct thermal_zone_device *tz,
 		__thermal_zone_device_update(tz, THERMAL_EVENT_UNSPECIFIED);
 }
 
-static void thermal_cooling_device_init_complete(struct thermal_cooling_device *cdev)
+void thermal_cooling_device_init_complete(struct thermal_cooling_device *cdev)
 {
 	struct thermal_zone_device *tz;
 
@@ -1127,8 +1127,6 @@ __thermal_cooling_device_register(struct device_node *np,
 	if (current_state <= cdev->max_state)
 		thermal_debug_cdev_add(cdev, current_state);
 
-	thermal_cooling_device_init_complete(cdev);
-
 	return cdev;
 
 out_cooling_dev:
@@ -1159,7 +1157,13 @@ struct thermal_cooling_device *
 thermal_cooling_device_register(const char *type, void *devdata,
 				const struct thermal_cooling_device_ops *ops)
 {
-	return __thermal_cooling_device_register(NULL, type, devdata, ops);
+	struct thermal_cooling_device *cdev;
+
+	cdev = __thermal_cooling_device_register(NULL, type, devdata, ops);
+	if (!IS_ERR(cdev))
+		thermal_cooling_device_init_complete(cdev);
+
+	return cdev;
 }
 EXPORT_SYMBOL_GPL(thermal_cooling_device_register);
 
