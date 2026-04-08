@@ -537,6 +537,7 @@ thermal_of_cooling_device_register(struct device_node *np,
 	if (IS_ERR(cdev))
 		return cdev;
 
+	cdev->np = np;
 	thermal_cooling_device_init_complete(cdev);
 
 	return cdev;
@@ -578,7 +579,7 @@ devm_thermal_of_cooling_device_register(struct device *dev,
 	if (!ptr)
 		return ERR_PTR(-ENOMEM);
 
-	tcd = __thermal_cooling_device_register(np, type, devdata, ops);
+	thermal_of_cooling_device_register(np, type, devdata, ops);
 	if (IS_ERR(tcd)) {
 		devres_free(ptr);
 		return tcd;
