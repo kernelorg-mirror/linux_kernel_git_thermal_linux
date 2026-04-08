@@ -533,7 +533,7 @@ thermal_of_cooling_device_register(struct device_node *np,
 {
 	struct thermal_cooling_device *cdev;
 
-	cdev = __thermal_cooling_device_register(np, type, devdata, ops);
+	cdev = __thermal_cooling_device_register(type, devdata, ops);
 	if (IS_ERR(cdev))
 		return cdev;
 

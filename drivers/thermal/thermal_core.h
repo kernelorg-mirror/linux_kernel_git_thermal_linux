@@ -272,8 +272,7 @@ void thermal_governor_update_tz(struct thermal_zone_device *tz,
 void thermal_cooling_device_init_complete(struct thermal_cooling_device *cdev);
 
 struct thermal_cooling_device *
-__thermal_cooling_device_register(struct device_node *np,
-				  const char *type, void *devdata,
+__thermal_cooling_device_register(const char *type, void *devdata,
 				  const struct thermal_cooling_device_ops *ops);
 
 /* Helpers */

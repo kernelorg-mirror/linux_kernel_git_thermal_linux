@@ -1042,7 +1042,6 @@ void thermal_cooling_device_init_complete(struct thermal_cooling_device *cdev)
 
 /**
  * __thermal_cooling_device_register() - register a new thermal cooling device
- * @np:		a pointer to a device tree node.
  * @type:	the thermal cooling device type.
  * @devdata:	device private data.
  * @ops:	standard thermal cooling devices callbacks.
@@ -1057,8 +1056,7 @@ void thermal_cooling_device_init_complete(struct thermal_cooling_device *cdev)
  * ERR_PTR. Caller must check return value with IS_ERR*() helpers.
  */
 struct thermal_cooling_device *
-__thermal_cooling_device_register(struct device_node *np,
-				  const char *type, void *devdata,
+__thermal_cooling_device_register(const char *type, void *devdata,
 				  const struct thermal_cooling_device_ops *ops)
 {
 	struct thermal_cooling_device *cdev;
@@ -1158,7 +1156,7 @@ thermal_cooling_device_register(const char *type, void *devdata,
 {
 	struct thermal_cooling_device *cdev;
 
-	cdev = __thermal_cooling_device_register(NULL, type, devdata, ops);
+	cdev = __thermal_cooling_device_register(type, devdata, ops);
 	if (!IS_ERR(cdev))
 		thermal_cooling_device_init_complete(cdev);
 
