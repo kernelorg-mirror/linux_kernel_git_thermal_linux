@@ -363,55 +363,28 @@ static void thermal_of_zone_unregister(struct thermal_zone_device *tz)
 	thermal_zone_device_unregister(tz);
 }
 
-/**
- * thermal_of_zone_register - Register a thermal zone with device node
- * sensor
- *
- * The thermal_of_zone_register() parses a device tree given a device
- * node sensor and identifier. It searches for the thermal zone
- * associated to the couple sensor/id and retrieves all the thermal
- * zone properties and registers new thermal zone with those
- * properties.
- *
- * @sensor: A device node pointer corresponding to the sensor in the device tree
- * @id: An integer as sensor identifier
- * @data: A private data to be stored in the thermal zone dedicated private area
- * @ops: A set of thermal sensor ops
- *
- * Return: a valid thermal zone structure pointer on success.
- *	- EINVAL: if the device tree thermal description is malformed
- *	- ENOMEM: if one structure can not be allocated
- *	- Other negative errors are returned by the underlying called functions
- */
-static struct thermal_zone_device *thermal_of_zone_register(struct device_node *sensor, int id, void *data,
-							    const struct thermal_zone_device_ops *ops)
+static struct thermal_zone_device *
+thermal_of_zone_register_node(struct device_node *np, void *data,
+			      const struct thermal_zone_device_ops *ops,
+			      const struct thermal_zone_params *params)
 {
 	struct thermal_zone_device_ops of_ops = *ops;
 	struct thermal_zone_device *tz;
 	struct thermal_trip *trips;
-	struct thermal_zone_params tzp = {};
-	struct device_node *np;
+	struct thermal_zone_params tzp;
 	const char *action;
 	int delay, pdelay;
 	int ntrips;
 	int ret;
 
-	np = of_thermal_zone_find(sensor, id);
-	if (IS_ERR(np)) {
-		if (PTR_ERR(np) != -ENODEV)
-			pr_err("Failed to find thermal zone for %pOFP id=%d\n", sensor, id);
-		return ERR_CAST(np);
-	}
-
 	trips = thermal_of_trips_init(np, &ntrips);
 	if (IS_ERR(trips)) {
-		pr_err("Failed to parse trip points for %pOFP id=%d\n", sensor, id);
-		ret = PTR_ERR(trips);
-		goto out_of_node_put;
+		pr_err("Failed to parse trip points for %pOFP\n", np);
+		return ERR_CAST(trips);
 	}
 
 	if (!trips)
-		pr_info("No trip points found for %pOFP id=%d\n", sensor, id);
+		pr_info("No trip points found for %pOFP\n", np);
 
 	ret = thermal_of_monitor_init(np, &delay, &pdelay);
 	if (ret) {
@@ -419,7 +392,7 @@ static struct thermal_zone_device *thermal_of_zone_register(struct device_node *
 		goto out_kfree_trips;
 	}
 
-	thermal_of_parameters_init(np, &tzp);
+	tzp = *params;
 
 	of_ops.should_bind = thermal_of_should_bind;
 
@@ -440,7 +413,6 @@ static struct thermal_zone_device *thermal_of_zone_register(struct device_node *
 		goto out_kfree_trips;
 	}
 
-	of_node_put(np);
 	kfree(trips);
 
 	ret = thermal_zone_device_enable(tz);
@@ -455,10 +427,29 @@ static struct thermal_zone_device *thermal_of_zone_register(struct device_node *
 
 out_kfree_trips:
 	kfree(trips);
-out_of_node_put:
+	return ERR_PTR(ret);
+}
+
+static struct thermal_zone_device *
+thermal_of_zone_register(struct device_node *sensor, int id, void *data,
+			 const struct thermal_zone_device_ops *ops)
+{
+	struct thermal_zone_params tzp = {};
+	struct thermal_zone_device *tz;
+	struct device_node *np;
+
+	np = of_thermal_zone_find(sensor, id);
+	if (IS_ERR(np)) {
+		if (PTR_ERR(np) != -ENODEV)
+			pr_err("Failed to find thermal zone for %pOFP id=%d\n", sensor, id);
+		return ERR_CAST(np);
+	}
+
+	thermal_of_parameters_init(np, &tzp);
+	tz = thermal_of_zone_register_node(np, data, ops, &tzp);
 	of_node_put(np);
 
-	return ERR_PTR(ret);
+	return tz;
 }
 
 static void devm_thermal_of_zone_release(struct device *dev, void *res)
