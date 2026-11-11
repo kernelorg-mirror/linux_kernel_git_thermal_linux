@@ -3100,6 +3100,15 @@
 	};
 
 	thermal_zones: thermal-zones {
+		/* Average temperature across the SoC's seven thermal sources. */
+		soc_thermal: soc-thermal {
+			polling-delay-passive = <0>;
+			polling-delay = <1000>;
+			thermal-sensors = <&tsadc 0>, <&tsadc 1>, <&tsadc 2>,
+					  <&tsadc 3>, <&tsadc 4>, <&tsadc 5>,
+					  <&tsadc 6>;
+		};
+
 		/* sensor near the center of the SoC */
 		package_thermal: package-thermal {
 			polling-delay-passive = <0>;
